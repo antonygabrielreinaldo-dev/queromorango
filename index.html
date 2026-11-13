@@ -21,6 +21,8 @@
 </head>
 <body>
 <div id="ld" role="status" aria-live="polite" aria-label="Carregando a Eu Quero Morango">
+  <div class="ld-wall" id="ld-wall" aria-hidden="true"><div class="ld-wall-plane"></div></div>
+  <div class="ld-glow" aria-hidden="true"></div>
   <div class="ld-p ld-pt"></div><div class="ld-p ld-pb"></div>
   <div class="ld-vig"></div>
   <div class="ld-fl" aria-hidden="true"><i style="--x:2.8%;--s:1.1;--d:15.5s;--w:-5.6s;--dx:1px;--o:0.48"></i><i style="--x:7.7%;--s:1.06;--d:13.4s;--w:-9.5s;--dx:-65px;--o:0.39"></i><i style="--x:13.4%;--s:1.33;--d:13.9s;--w:-0.5s;--dx:77px;--o:0.59"></i><i style="--x:21.6%;--s:1.15;--d:10.1s;--w:-0.2s;--dx:5px;--o:0.32"></i><i style="--x:25.8%;--s:0.82;--d:9.2s;--w:-5.6s;--dx:-10px;--o:0.55"></i><i style="--x:33.1%;--s:1.18;--d:12.5s;--w:-7.9s;--dx:-7px;--o:0.38"></i><i style="--x:41.0%;--s:1.5;--d:14.9s;--w:-8.5s;--dx:-30px;--o:0.37"></i><i style="--x:44.2%;--s:0.66;--d:14.4s;--w:-4.8s;--dx:55px;--o:0.42"></i><i style="--x:52.8%;--s:1.36;--d:9.0s;--w:-2.5s;--dx:66px;--o:0.44"></i><i style="--x:58.9%;--s:0.96;--d:9.5s;--w:-7.6s;--dx:45px;--o:0.38"></i><i style="--x:61.3%;--s:0.9;--d:15.7s;--w:-9.1s;--dx:-61px;--o:0.37"></i><i style="--x:67.4%;--s:0.65;--d:14.6s;--w:-2.1s;--dx:9px;--o:0.43"></i><i style="--x:73.8%;--s:1.26;--d:9.9s;--w:-7.7s;--dx:-61px;--o:0.43"></i><i style="--x:79.9%;--s:0.84;--d:15.8s;--w:-9.6s;--dx:-31px;--o:0.57"></i><i style="--x:85.8%;--s:0.95;--d:15.0s;--w:-7.7s;--dx:-64px;--o:0.6"></i><i style="--x:91.9%;--s:0.83;--d:14.4s;--w:-3.9s;--dx:-33px;--o:0.32"></i></div>
@@ -31,12 +33,67 @@
     </div>
     <p class="ld-tag">Presentes que emocionam</p>
     <div class="ld-prog" aria-hidden="true">
+      <p class="ld-msg" id="ld-msg">Colhendo as flores mais frescas</p>
       <div class="ld-line"><span id="ld-bar"></span></div>
       <div class="ld-num"><span id="ld-num">0</span>%</div>
     </div>
   </div>
   <p class="ld-foot" aria-hidden="true">Floricultura · Manaus</p>
 </div>
+<script>
+/* TELA DE CARREGAMENTO · fundo "drift wall" de buquês (versão JS puro do DriftWall, React Bits) */
+(function () {
+  var ldEl = document.getElementById('ld');
+  var wall = document.querySelector('#ld-wall .ld-wall-plane');
+  if (!ldEl || !wall) return;
+  var IMGS = [];
+  for (var i = 1; i <= 6; i++) IMGS.push('images/buques/buque-' + i + '.jpg');   // troque por fotos reais se quiser
+  var N = IMGS.length;
+  var small = window.innerWidth < 700;
+  var COLS = small ? 3 : 5;      // colunas
+  var TH = 150;                  // altura de cada tile + espaço (px)
+  var SPEED = small ? 34 : 44;   // velocidade base (px/s)
+  var SCALE = small ? 0.95 : 1.15;
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var period = N * TH, cols = [];
+
+  for (var c = 0; c < COLS; c++) {
+    var col = document.createElement('div'); col.className = 'ld-wall-col';
+    var track = document.createElement('div'); track.className = 'ld-wall-track';
+    for (var r = 0; r < 4; r++) {
+      for (var k = 0; k < N; k++) {
+        var t = document.createElement('div'); t.className = 'ld-wall-tile';
+        var im = document.createElement('img');
+        im.src = IMGS[(c * 2 + k) % N]; im.alt = ''; im.decoding = 'async'; im.draggable = false;
+        im.onerror = function () { this.style.display = 'none'; };
+        t.appendChild(im); track.appendChild(t);
+      }
+    }
+    col.appendChild(track); wall.appendChild(col);
+    cols.push({
+      track: track,
+      off: (c * 0.37 % 1) * period,
+      v: SPEED * (c % 2 ? -1 : 1) * (1 + 0.35 * (((c * 0.618 + 0.35) % 1) * 2 - 1))
+    });
+  }
+
+  var last = null, t0 = null;
+  function frame(ts) {
+    if (!document.body.contains(ldEl)) return;          // para quando a tela some
+    if (last === null) { last = ts; t0 = ts; }
+    var dt = Math.min(0.05, (ts - last) / 1000); last = ts;
+    var sway = reduce ? 0 : Math.sin((ts - t0) / 1000 * 0.35) * 3;
+    wall.style.transform = 'translate(-50%,-50%) scale(' + SCALE + ') rotateX(16deg) rotateY(' + (-14 + sway).toFixed(2) + 'deg) translateZ(-120px)';
+    for (var i = 0; i < cols.length; i++) {
+      var o = cols[i];
+      if (!reduce) o.off = (((o.off + o.v * dt) % period) + period) % period;
+      o.track.style.transform = 'translate3d(0,' + (-o.off).toFixed(1) + 'px,0)';
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
 <script>
 (function () {
   var ld = document.getElementById('ld');
@@ -46,7 +103,7 @@
 
   var num = document.getElementById('ld-num'), bar = document.getElementById('ld-bar');
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var DUR = reduce ? 700 : 4600;     // tempo mínimo de exibição (ms) — aumente para durar mais
+  var DUR = reduce ? 700 : 6000;     // tempo de exibição (ms): 6 segundos
   var FAILSAFE = 9000;               // nunca prende o visitante além disso
   var t0 = performance.now(), loaded = false, fonts = false, ready = false, p = 0, last = -1, done = false;
 
@@ -59,11 +116,21 @@
   setTimeout(function () { ready = true; }, FAILSAFE);
   setTimeout(function () { d.classList.remove('ld-wait'); }, FAILSAFE + 4000);
 
+  var msg = document.getElementById('ld-msg'), mi = -1;
+  var MSGS = [[0, 'Colhendo as flores mais frescas'], [22, 'Lavando os morangos'], [46, 'Mergulhando no chocolate'], [70, 'Montando o seu presente'], [94, 'Tudo pronto!']];
+  function setMsg(n) {
+    if (!msg) return;
+    var k = 0; for (var i = 0; i < MSGS.length; i++) if (n >= MSGS[i][0]) k = i;
+    if (k === mi) return; mi = k;
+    msg.classList.add('sw');
+    setTimeout(function () { msg.textContent = MSGS[k][1]; msg.classList.remove('sw'); }, 220);
+  }
+
   function ease(x) { return x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
 
   function finish() {
     if (done) return; done = true;
-    num.textContent = '100'; bar.style.transform = 'scaleX(1)';
+    num.textContent = '100'; bar.style.transform = 'scaleX(1)'; setMsg(100);
     setTimeout(function () {
       ld.classList.add('ld-out');
       d.classList.remove('ld-wait');
@@ -82,7 +149,7 @@
     p += (want - p) * 0.16;
     if (want - p < 0.05) p = want;
     var n = Math.round(p);
-    if (n !== last) { last = n; num.textContent = n; }
+    if (n !== last) { last = n; num.textContent = n; setMsg(n); }
     bar.style.transform = 'scaleX(' + (p / 100) + ')';
     if (ready && e >= 1 && p >= 99.5) { finish(); return; }
     requestAnimationFrame(tick);
