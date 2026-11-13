@@ -1469,8 +1469,8 @@ html.ld-lock{overflow:hidden}
 #ld.ld-out .ld-vig,#ld.ld-out .ld-fl,#ld.ld-out .ld-foot{opacity:0}
 
 .ld-mark{position:relative;width:min(52vw,200px);aspect-ratio:1;animation:ld-in 1.5s var(--e) .3s backwards}
-.ld-disc{position:absolute;inset:0;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;box-shadow:0 18px 40px -14px rgba(138,22,66,.55),0 0 0 7px rgba(179,30,86,.85);animation:ld-pulse 2.6s ease-in-out 1.8s infinite}
-.ld-disc img{display:block;width:80%;height:80%;object-fit:contain}
+.ld-disc{position:absolute;inset:0;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 18px 40px -14px rgba(138,22,66,.35);animation:ld-pulse 2.6s ease-in-out 1.8s infinite}
+.ld-disc img{display:block;width:76%;height:auto;object-fit:contain;margin:0 auto}
 .ld-ring{position:absolute;inset:-6%;border-radius:50%;border:1px solid rgba(179,30,86,.5);opacity:0;animation:ld-ripple 3.6s var(--e) 1.6s infinite;pointer-events:none}
 .ld-ring.r2{animation-delay:3.4s}
 @keyframes ld-ripple{0%{opacity:.7;transform:scale(.96)}100%{opacity:0;transform:scale(1.6)}}
