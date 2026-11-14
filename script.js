@@ -306,7 +306,14 @@ document.addEventListener('DOMContentLoaded',function(){
   }
 
   if($('dl'))$('dl').onchange=draw;
-  if($('bn'))$('bn').onchange=draw;
+  if($('bn')){
+    var tb=null;
+    $('bn').oninput=function(){
+      clearTimeout(tb);
+      tb=setTimeout(draw,250);
+    };
+    $('bn').onchange=draw;
+  }
   if($('dd'))$('dd').onchange=dchk;
   if($('lf'))$('lf').onsubmit=lembrete;
 
@@ -333,7 +340,7 @@ document.addEventListener('DOMContentLoaded',function(){
         ['rNome','Informe o destinatário(a)'],
         ['rTel','Informe o contato do destinatário'],
         ['rEnd','Informe o endereço'],
-        ['bn','Escolha o bairro de entrega'],
+        ['bn','Informe o bairro de entrega'],
         ['rSet','Informe o local/setor']
       ]);
     }
@@ -348,6 +355,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
     var s=sub();
     var f=fee(s);
+    var freteAConfirmar=del&&s&&s<FG&&!achaBairro($('bn').value);
     var pf=$('pgto').value==='c'?10:0;
 
     var pgt={
@@ -388,7 +396,7 @@ document.addEventListener('DOMContentLoaded',function(){
         'Destinatário(a): '+v('rNome'),
         'Contato: '+v('rTel'),
         'Endereço: '+v('rEnd'),
-        'Bairro: '+$('bn').value,
+        'Bairro: '+v('bn'),
         'Local/setor: '+v('rSet'),
         'Ponto de referência: '+(v('rRef')||'—'),
         'Localização: '+(v('rLoc')||'Enviarei depois')
@@ -440,7 +448,7 @@ document.addEventListener('DOMContentLoaded',function(){
       '',
       '💰 *RESUMO DA COMPRA*',
       'Subtotal: '+R(s),
-      'Frete: '+(f?R(f):'Grátis')
+      'Frete: '+(freteAConfirmar?'A confirmar (bairro fora da tabela)':f?R(f):'Grátis')
     );
 
     if(pf){
@@ -654,11 +662,31 @@ function sub(){
   },0);
 }
 
+/* BAIRRO DIGITADO PELO CLIENTE: ignora maiúsculas, acentos e "Sra./Senhora" */
+function normB(t){
+  return String(t||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/^bairro\s+/,'')
+    .replace(/\bsra\b\.?/g,'senhora')
+    .replace(/[^a-z0-9 ]/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+
+function achaBairro(t){
+  var n=normB(t);
+  if(!n)return null;
+  var ks=Object.keys(BAIRROS);
+  for(var i=0;i<ks.length;i++){
+    if(normB(ks[i])===n)return ks[i];
+  }
+  return null;
+}
+
 function fee(s){
   if(!s||$('dl').value==='r'||s>=FG)return 0;
 
-  var b=BAIRROS[$('bn').value];
-  return b==null?0:b;
+  var k=achaBairro($('bn').value);
+  return k?BAIRROS[k]:0;
 }
 
 /* CARRINHO */
@@ -697,7 +725,9 @@ function draw(){
     :'<div class="ep">Seu carrinho está vazio.<br>Escolha um presente lindo para emocionar!</div>';
 
   var del=$('dl').value==='e';
-  var need=del&&s&&s<FG&&!$('bn').value;
+  var bTxt=$('bn').value.trim();
+  var need=del&&s&&s<FG&&!bTxt;
+  var unk=del&&s&&s<FG&&!!bTxt&&!achaBairro(bTxt);
 
   $('rcv').style.display=del?'':'none';
   $('rtl').textContent=del?'Rota de entrega':'Horário de retirada';
@@ -710,10 +740,11 @@ function draw(){
   $('sb').textContent=R(s);
 
   $('fr').textContent=need
-    ?'Selecione o bairro'
+    ?'Informe o bairro'
+    :unk?'A confirmar no WhatsApp'
     :f?R(f):'Grátis';
 
-  $('tt').textContent=R(s+f+pf)+(need?' + frete':'');
+  $('tt').textContent=R(s+f+pf)+((need||unk)?' + frete':'');
 
   $('up').innerHTML=
     '<h5>Adicione um complemento</h5>'+
@@ -738,6 +769,7 @@ function drawer(o){
   $('dr').classList.toggle('on',o);
   $('ov').classList.toggle('on',o);
   $('dr').setAttribute('aria-hidden',!o);
+  document.documentElement.classList.toggle('cart-open',!!o);
 }
 
 document.addEventListener('keydown',function(e){
@@ -925,17 +957,13 @@ function renderStatic(){
 }
 
 function buildBairros(){
-  var v=$('bn').value;
+  /* sugestões opcionais: o cliente continua livre para digitar qualquer bairro */
+  var dl=$('bnl');
+  if(!dl)return;
 
-  $('bn').innerHTML=
-    '<option value="">Selecione o bairro…</option>'+
-    Object.keys(BAIRROS).map(function(b){
-      return '<option value="'+b+'">'+
-        b+' · '+R(BAIRROS[b])+
-        '</option>';
-    }).join('');
-
-  $('bn').value=v;
+  dl.innerHTML=Object.keys(BAIRROS).map(function(b){
+    return '<option value="'+b+'" label="'+R(BAIRROS[b])+'"></option>';
+  }).join('');
 }
 
 /* SERVIÇOS */
